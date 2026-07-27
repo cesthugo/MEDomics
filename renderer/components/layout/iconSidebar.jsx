@@ -14,7 +14,7 @@ import { Button } from "primereact/button"
 import { TbFileExport } from "react-icons/tb"
 import { VscChromeClose } from "react-icons/vsc"
 import { PiGraphFill } from "react-icons/pi"
-import { MdOutlineGroups3, MdSunny } from "react-icons/md"
+import { MdOutlineGroups3, MdSunny, MdExtension, MdLocalHospital } from "react-icons/md"
 import { MdOutlineDarkMode } from "react-icons/md";
 import { useTheme } from "../theme/themeContext"
 
@@ -24,7 +24,7 @@ import { useTheme } from "../theme/themeContext"
  * @param {function} onSidebarItemSelect - function to handle sidebar item selection
  * @returns Returns the sidebar component with icons for each page
  */
-const IconSidebar = ({ onSidebarItemSelect }) => {
+const IconSidebar = ({ onSidebarItemSelect, onExtensionsClick, installedPlugins = {} }) => {
   // eslint-disable-next-line no-unused-vars
   const { dispatchLayout, developerMode, setDeveloperMode } = useContext(LayoutModelContext)
   const { isDarkMode, toggleTheme } = useTheme()
@@ -134,6 +134,8 @@ const IconSidebar = ({ onSidebarItemSelect }) => {
         <Tooltip target=".medflNav" {...delayOptions} className="tooltip-icon-sidebar" />
         <Tooltip target=".med3paNav" {...delayOptions} className="tooltip-icon-sidebar" />
         <Tooltip target=".ext-eval-btn" {...delayOptions} className="tooltip-icon-sidebar" />
+        <Tooltip target=".starheNav" {...delayOptions} className="tooltip-icon-sidebar" />
+        <Tooltip target=".extensionsNav" {...delayOptions} className="tooltip-icon-sidebar" />
         {/* ------------------------------------------- END Tooltips ----------------------------------------- */}
 
         {/* ------------------------------------------- ICON NAVBAR ----------------------------------------- */}
@@ -409,6 +411,44 @@ const IconSidebar = ({ onSidebarItemSelect }) => {
             <div className="medomics-layer-text">Deployment</div>
           </div>
 
+          {/* ── Installed plugins ── */}
+          {installedPlugins?.starhe?.installed && (
+            <>
+              <NavDropdown.Divider style={{ height: "3rem" }} />
+              <div className="medomics-layer plugins">
+                <div className="sidebar-icons">
+                  <Nav.Link
+                    className="starheNav btnSidebar align-center"
+                    data-pr-at="right center"
+                    data-pr-my="left center"
+                    data-pr-tooltip="STARHE — Dépistage CHC"
+                    eventKey="starhe"
+                    onClick={(event) => handleClick(event, "starhe")}
+                  >
+                    <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <MdLocalHospital style={{ height: "1.9rem", width: "auto", color: installedPlugins.starhe.serverRunning ? "#4fc3f7" : "#9e9e9e" }} />
+                      {installedPlugins.starhe.serverRunning && (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: "-2px",
+                            right: "-4px",
+                            width: "7px",
+                            height: "7px",
+                            borderRadius: "50%",
+                            background: "#66bb6a",
+                            boxShadow: "0 0 4px #66bb6a",
+                          }}
+                        />
+                      )}
+                    </div>
+                  </Nav.Link>
+                </div>
+                <div className="medomics-layer-text">Plugins</div>
+              </div>
+            </>
+          )}
+
           {/* div that puts the buttons to the bottom of the sidebar*/}
           <div className="d-flex icon-sidebar-divider" style={{ flexGrow: "0.85" }}></div>
           {/* ------------------------------------------- DARK/LIGHT MODE BUTTON ----------------------------------------- */}
@@ -433,6 +473,37 @@ const IconSidebar = ({ onSidebarItemSelect }) => {
                 )}
               </Nav.Link>
               {/* ------------------------------------------- END DARK/LIGHT MODE BUTTON ----------------------------------------- */}
+
+              {/* ------------------------------------------- EXTENSIONS BUTTON ----------------------------------------- */}
+              <Nav.Link
+                className="extensionsNav btnSidebar align-center"
+                data-pr-at="right center"
+                data-pr-my="left center"
+                data-pr-tooltip="Extensions"
+                eventKey="extensions"
+                onClick={(event) => {
+                  event.preventDefault()
+                  onExtensionsClick && onExtensionsClick()
+                }}
+              >
+                <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <MdExtension style={{ height: "1.9rem", width: "auto" }} />
+                  {Object.values(installedPlugins).some((p) => p.installed) && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "-2px",
+                        right: "-4px",
+                        width: "7px",
+                        height: "7px",
+                        borderRadius: "50%",
+                        background: "#4fc3f7",
+                      }}
+                    />
+                  )}
+                </div>
+              </Nav.Link>
+              {/* ------------------------------------------- END EXTENSIONS BUTTON ----------------------------------------- */}
 
               {/* ------------------------------------------- SETTINGS BUTTON ----------------------------------------- */}
               <Nav.Link

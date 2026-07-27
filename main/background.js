@@ -16,6 +16,16 @@ import {
   installRequiredPythonPackages
 } from "./utils/pythonEnv"
 import { installMongoDB, checkRequirements } from "./utils/installation"
+import {
+  getPluginsState,
+  installPlugin,
+  uninstallPlugin,
+  updatePlugin,
+  startPluginServer,
+  stopPluginServer,
+  stopAllPlugins,
+  autoStartInstalledPlugins,
+} from "./utils/pluginManager"
 
 const fs = require("fs")
 const terminalManager = new TerminalManager()
@@ -305,6 +315,10 @@ if (isProd) {
       .then((process) => {
         serverProcess = process
         console.log("Server process started: ", serverProcess)
+        // Auto-start installed plugins once the main server is up
+        autoStartInstalledPlugins(mainWindow).catch((err) => {
+          console.warn("Plugin auto-start error:", err)
+        })
       })
       .catch((err) => {
         console.error("Failed to start server: ", err)
@@ -673,6 +687,14 @@ app.on("before-quit", async (event) => {
     console.warn("Error stopping MongoDB:", error)
   }
   
+  // Stop plugins
+  try {
+    await stopAllPlugins()
+    console.log("All plugins stopped")
+  } catch (error) {
+    console.warn("Error stopping plugins:", error)
+  }
+
   // Stop the server
   if (MEDconfig.runServerAutomatically) {
     try {
@@ -980,3 +1002,69 @@ export function getMongoDBPath() {
     return "mongod"
   }
 }
+
+// ── Plugin Manager IPC handlers ───────────────────────────────────────────────
+
+ipcMain.handle("plugin:get-state", async () => {
+  return getPluginsState()
+})
+
+ipcMain.handle("plugin:install", async (_event, id) => {
+  try {
+    await installPlugin(id, mainWindow)
+    return { success: true }
+  } catch (err) {
+    console.error(`[plugin:install] ${id}`, err)
+    return { success: false, error: err.message }
+  }
+})
+
+ipcMain.handle("plugin:uninstall", async (_event, id) => {
+  try {
+    await uninstallPlugin(id, mainWindow)
+    return { success: true }
+  } catch (err) {
+    console.error(`[plugin:uninstall] ${id}`, err)
+    return { success: false, error: err.message }
+  }
+})
+
+ipcMain.handle("plugin:update", async (_event, id) => {
+  try {
+    await updatePlugin(id, mainWindow)
+    return { success: true }
+  } catch (err) {
+    console.error(`[plugin:update] ${id}`, err)
+    return { success: false, error: err.message }
+  }
+})
+
+ipcMain.handle("plugin:start-server", async (_event, id) => {
+  try {
+    await startPluginServer(id, mainWindow)
+    return { success: true }
+  } catch (err) {
+    console.error(`[plugin:start-server] ${id}`, err)
+    return { success: false, error: err.message }
+  }
+})
+
+ipcMain.handle("plugin:stop-server", async (_event, id) => {
+  try {
+    await stopPluginServer(id, mainWindow)
+    return { success: true }
+  } catch (err) {
+    console.error(`[plugin:stop-server] ${id}`, err)
+    return { success: false, error: err.message }
+  }
+})
+
+// Health check depuis le main process (Node.js) — évite les restrictions réseau du renderer
+ipcMain.handle("plugin:check-health", async (_event, port) => {
+  try {
+    const response = await axios.get(`http://localhost:${port}/health`, { timeout: 2000 })
+    return { ok: response.status >= 200 && response.status < 300 }
+  } catch {
+    return { ok: false }
+  }
+})

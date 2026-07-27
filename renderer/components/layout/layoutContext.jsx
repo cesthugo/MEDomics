@@ -133,6 +133,8 @@ function LayoutModelProvider({ children, layoutModel, setLayoutModel }) {
           return openMEDfl(action)
         case "openMED3paModule":
           return openMED3pa(action)
+        case "openStarheModule":
+          return openStarhe(action)
         case "openSupersetModule":
           return openSuperset(action)
         case "openSupersetFrameModule":
@@ -396,6 +398,10 @@ function LayoutModelProvider({ children, layoutModel, setLayoutModel }) {
    */
   const openMED3pa = (action) => {
     openGeneric(action, "MED3pa", "med3paPage")
+  }
+
+  const openStarhe = (action) => {
+    openGeneric(action, "STARHE", "starhePage")
   }
 
   /**

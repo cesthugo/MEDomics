@@ -26,6 +26,8 @@ import { WorkspaceContext } from "../workspace/workspaceContext"
 import { requestBackend } from "../../utilities/requests"
 import { toast } from "react-toastify"
 import NotificationOverlay from "../generalPurpose/notificationOverlay"
+import StarhePage from "../mainPages/starhe"
+import ExtensionManager from "../extensions/ExtensionManager"
 
 import os from "os"
 
@@ -33,8 +35,18 @@ const LayoutManager = (props) => {
   const [activeSidebarItem, setActiveSidebarItem] = useState("home") // State to keep track of active nav item
   const [workspaceIsSet, setWorkspaceIsSet] = useState(true) // State to keep track of active nav item
   const sidebarRef = useRef(null) // Reference to the sidebar object
+  const [showExtensions, setShowExtensions] = useState(false)
+  const [installedPlugins, setInstalledPlugins] = useState({})
   const { developerMode } = useContext(LayoutModelContext)
   const { workspace, port } = useContext(WorkspaceContext)
+
+  // Load plugins state and listen for updates
+  useEffect(() => {
+    ipcRenderer.invoke("plugin:get-state").then(setInstalledPlugins).catch(console.error)
+    const onStateChanged = (_e, state) => setInstalledPlugins(state)
+    ipcRenderer.on("plugin:state-changed", onStateChanged)
+    return () => ipcRenderer.removeListener("plugin:state-changed", onStateChanged)
+  }, [])
 
   // This is a useEffect that will be called when the workspace change
   useEffect(() => {
@@ -172,6 +184,8 @@ const LayoutManager = (props) => {
           return <EvaluationPage />
         case "application":
           return <ApplicationPage />
+        case "starhe":
+          return <StarhePage />
         default:
       }
     }
@@ -282,7 +296,12 @@ const LayoutManager = (props) => {
   return (
     <>
       <div style={{ height: "100%", display: "flex", width: "100%" }}>
-        <IconSidebar onSidebarItemSelect={handleSidebarItemSelect} activeSidebarItem={activeSidebarItem} />
+        <IconSidebar
+          onSidebarItemSelect={handleSidebarItemSelect}
+          activeSidebarItem={activeSidebarItem}
+          onExtensionsClick={() => setShowExtensions(true)}
+          installedPlugins={installedPlugins}
+        />
         <div className="main-app-container">
           <PanelGroup autoSaveId="test" direction="horizontal">
             <Panel className={resizable.Panel} collapsible={true} minSize={20} maxSize={80} defaultSize={20} order={1} ref={sidebarRef}>
@@ -298,6 +317,7 @@ const LayoutManager = (props) => {
             </Panel>
           </PanelGroup>
           <NotificationOverlay />
+          <ExtensionManager open={showExtensions} onClose={() => setShowExtensions(false)} />
           <div className="quebec-flag-div">
             <Image
               className="quebec-flag"

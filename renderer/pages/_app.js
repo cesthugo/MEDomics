@@ -59,6 +59,7 @@ import "../styles/output.css"
 import "../styles/sidebarTree.css"
 import "../styles/workspaceSidebar.css"
 import "../styles/theme.css"
+import "../styles/extensions.css"
 
 /**
  * This is the main app component. It is the root component of the app.

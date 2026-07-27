@@ -14,6 +14,7 @@ import (
 	Learning "go_module/blueprints/learning"
 	MED3pa "go_module/blueprints/med3pa"
 	MEDfl "go_module/blueprints/medfl"
+	Starhe "go_module/blueprints/starhe"
 	Superset "go_module/blueprints/superset"
 	Utils "go_module/src"
 	"log"
@@ -37,6 +38,7 @@ func main() {
 	Application.AddHandleFunc()
 	MED3pa.AddHandleFunc()
 	MEDfl.AddHandleFunc()
+	Starhe.AddHandleFunc()
 	Superset.AddHandleFunc()
 	Utils.CreateHandleFunc("get_server_health", handleGetServerHealth)
 	Utils.CreateHandleFunc("removeId/", handleRemoveId)

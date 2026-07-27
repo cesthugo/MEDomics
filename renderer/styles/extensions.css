@@ -1,0 +1,299 @@
+/* ── Extensions panel backdrop ───────────────────────────────────────────── */
+.ext-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1100;
+  animation: ext-fade-in 0.15s ease;
+}
+
+@keyframes ext-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+.ext-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1110;
+  width: min(780px, 92vw);
+  max-height: 88vh;
+  background: #1e2330;
+  border: 1px solid #2e3550;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: ext-slide-in 0.2s cubic-bezier(0.34, 1.3, 0.64, 1);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes ext-slide-in {
+  from { opacity: 0; transform: translate(-50%, -52%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.ext-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem 0.9rem;
+  border-bottom: 1px solid #2e3550;
+  flex-shrink: 0;
+}
+
+.ext-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.ext-close-btn {
+  background: none;
+  border: none;
+  color: #9e9e9e;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+.ext-close-btn:hover {
+  color: #e2e8f0;
+  background: #2e3550;
+}
+
+.ext-panel-subtitle {
+  padding: 0.7rem 1.4rem 0.4rem;
+  color: #718096;
+  font-size: 0.82rem;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* ── Plugin list ─────────────────────────────────────────────────────────── */
+.ext-plugin-list {
+  overflow-y: auto;
+  padding: 0.8rem 1.2rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ext-empty {
+  text-align: center;
+  color: #718096;
+  padding: 2rem;
+}
+
+/* ── Plugin card ─────────────────────────────────────────────────────────── */
+.ext-plugin-card {
+  background: #252d3f;
+  border: 1px solid #2e3550;
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem 1rem;
+  transition: border-color 0.15s;
+}
+.ext-plugin-card:hover {
+  border-color: #4fc3f7;
+}
+
+.ext-plugin-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  margin-bottom: 0.7rem;
+}
+
+.ext-plugin-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  background: #1a2236;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #2e3550;
+}
+
+.ext-plugin-title-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.ext-plugin-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  line-height: 1.3;
+}
+
+.ext-plugin-fullname {
+  font-size: 0.72rem;
+  color: #718096;
+  margin-top: 0.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ext-plugin-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.ext-plugin-author {
+  font-size: 0.72rem;
+  color: #a0aec0;
+}
+
+/* ── Status badge ────────────────────────────────────────────────────────── */
+.ext-status-badge {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 72px;
+}
+
+.ext-server-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 2px;
+}
+.ext-server-dot--on  { background: #66bb6a; box-shadow: 0 0 5px #66bb6a; }
+.ext-server-dot--off { background: #616161; }
+
+/* ── Description ─────────────────────────────────────────────────────────── */
+.ext-plugin-description {
+  font-size: 0.82rem;
+  color: #a0aec0;
+  line-height: 1.55;
+  margin: 0 0 0.9rem;
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────────── */
+.ext-plugin-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.ext-btn-install { background: #1565c0 !important; border-color: #1565c0 !important; }
+.ext-btn-install:hover:not(:disabled) { background: #1976d2 !important; }
+
+.ext-btn-update  { color: #4fc3f7 !important; border-color: #4fc3f7 !important; }
+.ext-btn-uninstall { }
+
+/* ── Progress block ──────────────────────────────────────────────────────── */
+.ext-progress-block {
+  background: #1a2236;
+  border: 1px solid #2e3550;
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.ext-progress-steps {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.ext-progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: #555;
+}
+.ext-progress-step.done   { color: #66bb6a; }
+.ext-progress-step.active { color: #4fc3f7; }
+
+.ext-progress-message {
+  font-size: 0.78rem;
+  color: #a0aec0;
+  font-style: italic;
+}
+
+/* ── Install done ────────────────────────────────────────────────────────── */
+.ext-install-done {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #66bb6a;
+  margin-bottom: 0.6rem;
+}
+
+/* ── Error message ───────────────────────────────────────────────────────── */
+.ext-error-msg {
+  background: #3b1a1a;
+  border: 1px solid #7f1d1d;
+  border-radius: 6px;
+  color: #fc8181;
+  font-size: 0.78rem;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.4rem;
+}
+
+/* ── Extensions button in icon sidebar ──────────────────────────────────── */
+.extensionsNav {
+  position: relative;
+}
+
+/* ── STARHE page loading overlay ─────────────────────────────────────────── */
+.starhe-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0c1018;
+  color: #e2e8f0;
+}
+
+.starhe-loading-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #4fc3f7;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.3rem;
+}
+
+.starhe-loading-sub {
+  font-size: 0.85rem;
+  color: #718096;
+  text-align: center;
+  max-width: 280px;
+}
+
+.starhe-retry-btn {
+  margin-top: 1.2rem;
+  padding: 0.5rem 1.4rem;
+  background: #1565c0;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s;
+}
+.starhe-retry-btn:hover { background: #1976d2; }
