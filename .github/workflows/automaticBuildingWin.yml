@@ -7,7 +7,10 @@ permissions:
   contents: write
 jobs:
   build-windows:
-    runs-on: windows-latest
+    # Pin to windows-2022 (VS 2022): windows-latest moved to VS 18, which the old
+    # CMake (3.25.1) fetched by the libmongocrypt build does not support, so it
+    # fell back to NMake and failed. VS 2022 matches CMAKE_GENERATOR below.
+    runs-on: windows-2022
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
