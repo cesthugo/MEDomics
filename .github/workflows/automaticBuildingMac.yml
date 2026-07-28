@@ -10,6 +10,13 @@ jobs:
     runs-on: macos-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Build unsigned when Apple credentials are not configured (e.g. on a fork).
+      # When the CSC_LINK secret is absent, the signing/notarization steps are
+      # skipped and electron-builder produces an unsigned .dmg
+      # (CSC_IDENTITY_AUTO_DISCOVERY=false). macOS then requires a one-time
+      # `xattr -dr com.apple.quarantine /Applications/MEDomics.app` to open it.
+      HAS_APPLE_CERT: ${{ secrets.CSC_LINK != '' }}
+      CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
 
     steps:
       - name: Checkout code
@@ -19,6 +26,7 @@ jobs:
           fetch-depth: 0 # Fetch full history for branches
 
       - name: Keys and certificates
+        if: env.HAS_APPLE_CERT == 'true'
         env:
           APPLE_CERT_DATA: ${{ secrets.CSC_INSTALLER_LINK }}
           APPLE_CERT_PASSWORD: ${{ secrets.CSC_INSTALLER_KEY_PASSWORD }}
@@ -41,6 +49,7 @@ jobs:
           # Store as a keychain profile (for signing)
 
       - name: keychain profile
+        if: env.HAS_APPLE_CERT == 'true'
         env:
           APPLE_NOTARY_USER: ${{ secrets.APPLE_ID }}
           APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
