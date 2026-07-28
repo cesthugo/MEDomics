@@ -54,6 +54,12 @@ jobs:
           arch: x64
 
       - name: Prebuild libmongocrypt
+        # Force the Visual Studio generator: on the runner CMake otherwise defaults
+        # to "NMake Makefiles", which rejects the "-A x64" platform flag the build
+        # passes and cannot locate the C compiler.
+        env:
+          CMAKE_GENERATOR: "Visual Studio 17 2022"
+          CMAKE_GENERATOR_PLATFORM: x64
         run: bash ./utilScripts/libmongocrypt_prebuild.sh
 
       - name: Build for Windows
