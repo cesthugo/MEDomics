@@ -7,7 +7,10 @@ permissions:
   contents: write
 jobs:
   build-mac:
-    runs-on: macos-latest
+    # Pin to macos-14 (Apple Silicon): macos-latest moved to a newer clang that
+    # treats the old libmongocrypt's -Wgnu-folding-constant warning as a -Werror
+    # error. macos-14's toolchain builds it cleanly. (Still arm64, no Intel.)
+    runs-on: macos-14
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Build unsigned when Apple credentials are not configured (e.g. on a fork).
