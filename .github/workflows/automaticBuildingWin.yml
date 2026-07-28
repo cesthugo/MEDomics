@@ -42,8 +42,16 @@ jobs:
       - name: Build go
         run: |
           cd go_server
-          go build main.go 
+          go build main.go
           cd ..
+
+      # Load the Visual Studio C/C++ toolchain (cl.exe, nmake, vcvars) into the
+      # environment. Without it, libmongocrypt's CMake build fails on the runner
+      # with "CMAKE_C_COMPILER not set" / wrong generator.
+      - name: Set up MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - name: Prebuild libmongocrypt
         run: bash ./utilScripts/libmongocrypt_prebuild.sh
