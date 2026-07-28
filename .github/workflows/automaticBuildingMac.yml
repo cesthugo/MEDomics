@@ -149,7 +149,11 @@ jobs:
 
       # Before building the app, allocate more memory to the shell
       - name: Allocate more memory
-        run: export NODE_OPTIONS=--max-old-space-size=8192
+        # `export` in a run block does NOT persist to later steps; write to
+        # $GITHUB_ENV so NODE_OPTIONS actually applies to "Build for Mac".
+        # Without it the packaging step OOM-kills node while collecting the
+        # dependency tree (the log stops abruptly with no error).
+        run: echo "NODE_OPTIONS=--max-old-space-size=8192" >> "$GITHUB_ENV"
 
       - name: Get tag name
         id: get-tag
