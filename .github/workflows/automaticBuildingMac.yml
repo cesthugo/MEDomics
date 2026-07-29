@@ -175,15 +175,24 @@ jobs:
       - name: Prune extraneous node modules
         run: npm prune
 
+      # Expose the signing certificates ONLY when they exist. On a fork without
+      # Apple secrets, leaving CSC_LINK unset lets electron-builder build unsigned;
+      # passing an EMPTY CSC_LINK makes it try (and fail) to sign ("… not a file").
+      - name: Configure macOS signing (only with Apple cert)
+        if: env.HAS_APPLE_CERT == 'true'
+        run: |
+          {
+            echo "CSC_LINK=${{ secrets.CSC_LINK }}"
+            echo "CSC_KEY_PASSWORD=${{ secrets.CSC_KEY_PASSWORD }}"
+            echo "CSC_INSTALLER_LINK=${{ secrets.CSC_INSTALLER_LINK }}"
+            echo "CSC_INSTALLER_KEY_PASSWORD=${{ secrets.CSC_INSTALLER_KEY_PASSWORD }}"
+          } >> "$GITHUB_ENV"
+
       - name: Build for Mac
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          CSC_INSTALLER_LINK: ${{ secrets.CSC_INSTALLER_LINK }}
-          CSC_INSTALLER_KEY_PASSWORD: ${{ secrets.CSC_INSTALLER_KEY_PASSWORD }}
         run: |
           npm run build:mac
 
