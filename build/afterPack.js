@@ -11,7 +11,10 @@ exports.default = async function (context) {
   require("dotenv").config()
   const DEVELOPER_ID = process.env.DEVELOPER_ID_APP
   if (!DEVELOPER_ID) {
-    throw new Error("DEVELOPER_ID environment variable is not set")
+    // Unsigned build (e.g. a fork without Apple credentials): skip code signing
+    // but still run the essential native-module extraction below. The codesign
+    // call is already disabled (see below), so DEVELOPER_ID is otherwise unused.
+    console.warn("AfterPack: DEVELOPER_ID_APP not set — building unsigned, skipping code signing.")
   }
 
   try {
