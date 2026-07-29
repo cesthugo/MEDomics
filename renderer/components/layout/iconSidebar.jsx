@@ -423,6 +423,7 @@ const IconSidebar = ({ onSidebarItemSelect, onExtensionsClick, installedPlugins 
                     data-pr-my="left center"
                     data-pr-tooltip="STARHE — Dépistage CHC"
                     eventKey="starhe"
+                    onDoubleClick={(event) => handleDoubleClickModule(event, "Starhe")}
                     onClick={(event) => handleClick(event, "starhe")}
                   >
                     <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>

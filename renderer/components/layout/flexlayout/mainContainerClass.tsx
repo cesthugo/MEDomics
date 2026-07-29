@@ -46,6 +46,7 @@ import HtmlViewer from "../../mainPages/htmlViewer"
 import LearningPage from "../../mainPages/learning"
 import MED3paPage from "../../mainPages/med3pa"
 import MEDflPage from "../../mainPages/medfl"
+import StarhePage from "../../mainPages/starhe"
 import ModelViewer from "../../mainPages/modelViewer"
 import ModulePage from "../../mainPages/moduleBasics/modulePage"
 import OutputPage from "../../mainPages/output"
@@ -1163,6 +1164,10 @@ class MainInnerContainer extends React.Component<any, { layoutFile: string | nul
         } else {
           return <ApplicationPage pageId={"EvaluationPage"} />
         }
+      }
+    } else if (component === "starhePage") {
+      if (node.getExtraData().data == null) {
+        return <StarhePage />
       }
     } else if (component === "logging") {
       if (node.getExtraData().data == null) {
