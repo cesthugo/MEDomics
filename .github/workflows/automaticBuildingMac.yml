@@ -166,6 +166,15 @@ jobs:
           echo "DEVELOPER_ID_APP='${{ secrets.DEVELOPER_ID_APP }}'" >> .env
           echo "DEVELOPER_ID_INSTALLER='${{ secrets.DEVELOPER_ID_INSTALLER }}'" >> .env
 
+      # The libmongocrypt prebuild leaves extraneous build-time packages in
+      # node_modules (prebuild-install, tar-fs, rc, …). electron-builder collects
+      # the whole tree on the 7 GB Apple Silicon runner and gets OOM-killed there.
+      # `npm prune` drops packages not declared in package.json (keeps deps +
+      # devDeps the build needs) and clears the npm ELSPROBLEMS noise, lowering
+      # the memory used during dependency collection.
+      - name: Prune extraneous node modules
+        run: npm prune
+
       - name: Build for Mac
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
