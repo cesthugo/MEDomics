@@ -188,6 +188,26 @@ jobs:
             echo "CSC_INSTALLER_KEY_PASSWORD=${{ secrets.CSC_INSTALLER_KEY_PASSWORD }}"
           } >> "$GITHUB_ENV"
 
+      # app-builder-lib does `import("@electron/osx-sign/dist/cjs/util-identities")`
+      # WITHOUT the `.js` extension. osx-sign 1.3.3 has no `exports` map, so Node's
+      # ESM loader refuses the extensionless subpath (ERR_MODULE_NOT_FOUND, "Did you
+      # mean util-identities.js?") and electron-builder crashes during macOS
+      # identity discovery — even for unsigned builds. Both 26.13.x and 26.15.x ship
+      # this bug and both still bundle osx-sign 1.3.3, so bumping the version does
+      # not fix it (and 26.15.x additionally breaks on @noble/hashes ESM). Patch the
+      # missing extension in the two compiled files that reference it. Idempotent.
+      - name: Patch app-builder-lib osx-sign import (add .js extension)
+        run: |
+          files=$(grep -rl 'osx-sign/dist/cjs/util-identities"' node_modules/app-builder-lib/out || true)
+          if [ -z "$files" ]; then
+            echo "No extensionless osx-sign import found (already fixed upstream?) — skipping."
+          else
+            echo "$files" | while IFS= read -r f; do
+              perl -pi -e 's{osx-sign/dist/cjs/util-identities"}{osx-sign/dist/cjs/util-identities.js"}g' "$f"
+              echo "patched: $f"
+            done
+          fi
+
       - name: Build for Mac
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
