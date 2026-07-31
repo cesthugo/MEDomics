@@ -202,6 +202,32 @@ function readBundleManifest(pluginDir) {
   }
 }
 
+// macOS only: applies a fresh ad-hoc code signature to the plugin's native
+// Mach-O files. Unzipping invalidates the binaries' original signature on Apple
+// Silicon, so the OS kills them right after launch; re-signing in place fixes
+// it. Best-effort and idempotent (no-op if codesign is unavailable).
+function resignMacBinaries(pluginDir, entry) {
+  const sign = (p) => {
+    try {
+      execSync(`codesign --force --sign - "${p}"`, { stdio: "ignore" })
+    } catch {}
+  }
+  // Entrypoint executables (Go server, PyInstaller worker, bundled JRE launcher)
+  for (const rel of [entry.goServer, entry.workerBin, entry.javaBin]) {
+    if (rel) sign(path.join(pluginDir, rel))
+  }
+  // Nested shared libraries shipped with the worker / JRE / Weasis
+  for (const sub of ["starhe_worker", "jre", "weasis-dcm2png"]) {
+    const dir = path.join(pluginDir, sub)
+    if (!fs.existsSync(dir)) continue
+    try {
+      execSync(`find "${dir}" \\( -name "*.dylib" -o -name "*.so" \\) -exec codesign --force --sign - {} \\;`, {
+        stdio: "ignore",
+      })
+    } catch {}
+  }
+}
+
 // Returns the most recent Release (prereleases included, drafts excluded) that
 // actually ships a bundle for the current platform. We do NOT use
 // /releases/latest because it ignores prereleases (the plugin's betas).
@@ -337,6 +363,19 @@ async function installFromDownload(id, mainWindow) {
       } catch {}
     }
   }
+
+  // 5b. macOS: re-sign the extracted native binaries ad-hoc. On Apple Silicon,
+  // unzipping invalidates the binary's original (linker/ad-hoc) code signature,
+  // so macOS SIGKILLs it shortly after the packaged app spawns it (the plugin
+  // server then "closes (code null)" ~9s after launch and never becomes
+  // reachable). `codesign --force --sign -` applies a fresh ad-hoc signature in
+  // the new location. We sign the entrypoint executables plus the nested
+  // dylibs/.so inside the PyInstaller worker and the JRE. No-op if codesign is
+  // absent. See main/utils/server.js for the equivalent core-backend concern.
+  if (process.platform === "darwin") {
+    resignMacBinaries(pluginDir, entry)
+  }
+
   emitProgress(mainWindow, id, "extract", 100, "Bundle extracted ✓")
 
   // 6. Persist state
