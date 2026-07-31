@@ -24,7 +24,10 @@ export const requestBackend = (port, topic, json2send, jsonReceivedCB, onError) 
  * @param {Function} onError executed when an error occurs
  */
 export const requestJson = (port, topic, json2send, jsonReceivedCB, onError) => {
-  let url = "http://localhost:" + port + (topic[0] != "/" ? "/" : "") + topic
+  // Use 127.0.0.1 (not "localhost"): on Windows "localhost" often resolves to
+  // IPv6 ::1 first, while the Go backend listens on IPv4 — the request then
+  // fails silently and the app reports "Go server is not connected".
+  let url = "http://127.0.0.1:" + port + (topic[0] != "/" ? "/" : "") + topic
   if (topic.includes("http")) {
     url = topic
   }
@@ -67,7 +70,9 @@ export const requestJson = (port, topic, json2send, jsonReceivedCB, onError) => 
  */
 export const axiosPostJsonGo = async (port, topic, json2send, jsonReceivedCB, onError) => {
   try {
-    let url = "http://localhost:" + port + (topic[0] != "/" ? "/" : "") + topic
+    // 127.0.0.1 forces IPv4 loopback (see note in requestJson): "localhost" can
+    // resolve to ::1 on Windows and miss the IPv4-bound Go backend.
+    let url = "http://127.0.0.1:" + port + (topic[0] != "/" ? "/" : "") + topic
     if (topic.includes("http")) {
       url = topic
     }

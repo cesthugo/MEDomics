@@ -1062,7 +1062,7 @@ ipcMain.handle("plugin:stop-server", async (_event, id) => {
 // Health check depuis le main process (Node.js) — évite les restrictions réseau du renderer
 ipcMain.handle("plugin:check-health", async (_event, port) => {
   try {
-    const response = await axios.get(`http://localhost:${port}/health`, { timeout: 2000 })
+    const response = await axios.get(`http://127.0.0.1:${port}/health`, { timeout: 2000 })
     return { ok: response.status >= 200 && response.status < 300 }
   } catch {
     return { ok: false }

@@ -186,9 +186,16 @@ export async function runServer(isProd, serverPort, serverProcess, serverState, 
         serverPort = port
         console.log("_dirname: ", __dirname)
         console.log("process.resourcesPath: ", process.resourcesPath)
+        // Diagnostic: confirms findAvailablePort resolved and which binary/port
+        // we are about to launch. If this line is ABSENT from the logs, the Go
+        // backend was never started (findAvailablePort hung); if PRESENT but the
+        // backend is still unreachable, the problem is connectivity, not launch.
+        console.log(`runServer(prod): launching Go backend on port ${port} (platform ${process.platform})`)
 
         if (process.platform == "win32") {
-          serverProcess = execFile(path.join(process.resourcesPath, "go_executables\\server_go_win32.exe"), args, {
+          const winExe = path.join(process.resourcesPath, "go_executables\\server_go_win32.exe")
+          console.log(`runServer(prod): exe = ${winExe}`)
+          serverProcess = execFile(winExe, args, {
             windowsHide: false,
             env: env
           })

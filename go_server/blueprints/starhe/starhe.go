@@ -23,12 +23,15 @@ import (
 )
 
 // starheServerURL retourne l'adresse du serveur STARHE standalone.
+// On force 127.0.0.1 (et non "localhost") : sur Windows "localhost" peut se
+// résoudre en IPv6 ::1 alors que le serveur STARHE écoute en IPv4, ce qui fait
+// échouer le proxy ("STARHE server unavailable").
 func starheServerURL() string {
 	port := os.Getenv("STARHE_SERVER_PORT")
 	if port == "" {
 		port = "8082"
 	}
-	return "http://localhost:" + port
+	return "http://127.0.0.1:" + port
 }
 
 // newProxy crée un reverse proxy vers le serveur STARHE.
