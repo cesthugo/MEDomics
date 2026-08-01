@@ -32,8 +32,11 @@ export const PLUGIN_REGISTRY = {
     version: "0.7.0", // display fallback — the real version comes from the Release / repo
     author: "MEDomicsLab",
     githubUrl: "https://github.com/cesthugo/PLUGIN1-MEDomics",
-    githubRepo: "cesthugo/PLUGIN1-MEDomics", // used by "source" mode (clone)
-    releaseRepo: "cesthugo/PLUGIN1-MEDomics", // used by "download" mode (Releases)
+    githubRepo: "cesthugo/PLUGIN1-MEDomics", // used by "source" mode (clone) — the source repo (may be private)
+    // used by "download" mode (Releases). A SEPARATE public repo that only hosts
+    // the prebuilt slim bundles, so the source repo can go private without
+    // breaking the anonymous download path (no token needed by end users).
+    releaseRepo: "cesthugo/PLUGIN1-MEDomics-Releases",
     bundlePrefix: "starhe-plugin", // asset name: {bundlePrefix}-{version}-{platformTag}.zip
     port: 8082,
     tags: ["DICOM", "Medical imaging", "AI", "Ultrasound", "Carcinoma"],
