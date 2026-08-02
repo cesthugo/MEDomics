@@ -93,6 +93,12 @@ function setPluginState(id, patch) {
 // ── Running processes ─────────────────────────────────────────────────────────
 
 const _procs = {}
+// Plugins we stopped ON PURPOSE (stop/uninstall/update) — their exit must NOT
+// trigger the auto-restart below.
+const _stopping = new Set()
+// Per-plugin restart counter, reset on every explicit (re)start.
+const _restarts = {}
+const MAX_RESTARTS = 5
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -651,6 +657,79 @@ async function updateFromSource(id, mainWindow, pluginDir) {
   await startPluginServer(id, mainWindow)
 }
 
+// Spawns the plugin server process and wires up:
+//   • persistent logging of its stdout/stderr to <dataDir>/server.log — the
+//     plugin's OWN output is otherwise lost (child stdio is buffered/dropped on
+//     Windows when the app is packaged), which is why every past crash was
+//     invisible. This file is the first place to look when the server "won't
+//     start".
+//   • auto-restart on an UNEXPECTED exit (capped). The plugin server was
+//     observed dying ~10-15s after launch (code null) on Windows/macOS with
+//     nothing restarting it, so the UI polled /health forever. We now respawn it
+//     unless we stopped it on purpose.
+function spawnPluginProcess(id, mainWindow, binaryPath, env, meta) {
+  const logPath = path.join(getPluginDataDir(id), "server.log")
+  let logStream = null
+  try {
+    fs.mkdirSync(getPluginDataDir(id), { recursive: true })
+    logStream = fs.createWriteStream(logPath, { flags: "a" })
+    logStream.write(`\n===== ${new Date().toISOString()} launch ${binaryPath} (port ${meta.port}) =====\n`)
+  } catch {}
+
+  const child = execFile(binaryPath, [], { env, cwd: path.dirname(binaryPath), windowsHide: true })
+  _procs[id] = child
+
+  child.stdout?.on("data", (d) => {
+    const s = d.toString()
+    console.log(`[plugin:${id}]`, s.trim())
+    try { logStream?.write(s) } catch {}
+  })
+  child.stderr?.on("data", (d) => {
+    const s = d.toString()
+    console.error(`[plugin:${id} ERR]`, s.trim())
+    try { logStream?.write(s) } catch {}
+  })
+
+  child.on("close", (code, signal) => {
+    console.log(`[plugin:${id}] server closed (code ${code} signal ${signal})`)
+    try {
+      logStream?.write(`===== ${new Date().toISOString()} closed code=${code} signal=${signal} =====\n`)
+      logStream?.end()
+    } catch {}
+    const wasCurrent = _procs[id] === child
+    if (wasCurrent) delete _procs[id]
+    setPluginState(id, { serverRunning: false })
+    emitStateChanged(mainWindow)
+
+    // Auto-restart unless we asked it to stop, and only while it is the current
+    // process (guards against a stale handler racing a fresh spawn).
+    if (!_stopping.has(id) && wasCurrent) {
+      const n = (_restarts[id] || 0) + 1
+      if (n <= MAX_RESTARTS) {
+        _restarts[id] = n
+        console.warn(`[plugin:${id}] unexpected exit — restarting (${n}/${MAX_RESTARTS})`)
+        setTimeout(() => {
+          if (_stopping.has(id)) return
+          if (_procs[id] && !_procs[id].killed) return
+          if (!fs.existsSync(binaryPath)) return
+          spawnPluginProcess(id, mainWindow, binaryPath, env, meta)
+        }, 1500)
+      } else {
+        console.error(`[plugin:${id}] exceeded ${MAX_RESTARTS} restarts — giving up. See ${logPath}`)
+      }
+    }
+  })
+
+  child.on("error", (err) => {
+    console.error(`[plugin:${id}] start error`, err.message)
+    try { logStream?.write(`spawn error: ${err.message}\n`) } catch {}
+    if (_procs[id] === child) delete _procs[id]
+    emitStateChanged(mainWindow)
+  })
+
+  return child
+}
+
 export async function startPluginServer(id, mainWindow) {
   if (_procs[id] && !_procs[id].killed) return
 
@@ -716,25 +795,12 @@ export async function startPluginServer(id, mainWindow) {
   // version would keep being served in its place.
   await killProcessOnPort(meta.port)
 
-  _procs[id] = execFile(binaryPath, [], {
-    env,
-    cwd: path.dirname(binaryPath),
-    windowsHide: true,
-  })
+  // This is an intentional (re)start: clear the "stopping" flag and reset the
+  // restart budget so the watchdog in spawnPluginProcess is armed fresh.
+  _stopping.delete(id)
+  _restarts[id] = 0
 
-  _procs[id].stdout?.on("data", (d) => console.log(`[plugin:${id}]`, d.toString().trim()))
-  _procs[id].stderr?.on("data", (d) => console.error(`[plugin:${id} ERR]`, d.toString().trim()))
-  _procs[id].on("close", (code) => {
-    console.log(`[plugin:${id}] server closed (code ${code})`)
-    delete _procs[id]
-    setPluginState(id, { serverRunning: false })
-    emitStateChanged(mainWindow)
-  })
-  _procs[id].on("error", (err) => {
-    console.error(`[plugin:${id}] start error`, err.message)
-    delete _procs[id]
-    emitStateChanged(mainWindow)
-  })
+  spawnPluginProcess(id, mainWindow, binaryPath, env, meta)
 
   await new Promise((r) => setTimeout(r, 1500))
 
@@ -752,6 +818,8 @@ export async function startPluginServer(id, mainWindow) {
 }
 
 export async function stopPluginServer(id, mainWindow) {
+  // Mark as an intentional stop so the close handler does NOT auto-restart it.
+  _stopping.add(id)
   if (_procs[id]) {
     try {
       _procs[id].kill()
