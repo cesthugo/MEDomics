@@ -497,9 +497,21 @@ if (isProd) {
    * @returns {Boolean} True if the server is running, false otherwise
    */
   ipcMain.handle("start-server", async (_event, pythonPath = null) => {
+    // The renderer calls this on EVERY failed connection retry
+    // (layoutManager.checkGoServerConnection). If the backend is already running
+    // — or still booting — do NOT tear it down: killing a backend that just
+    // needs another moment to finish booting created a destructive kill/restart
+    // loop on Windows where the Go server (and its STARHE reverse proxy) never
+    // stabilized. Only (re)start when nothing is actually running.
+    if (serverProcess && serverState.serverIsRunning) {
+      console.log("start-server: backend already running — skipping restart")
+      return serverState.serverIsRunning
+    }
     if (serverProcess) {
       // kill the server if it is already running
-      serverProcess.kill()
+      try {
+        serverProcess.kill()
+      } catch {}
     }
     console.log("Received Python path: ", pythonPath)
     if (MEDconfig.runServerAutomatically) {

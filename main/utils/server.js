@@ -18,12 +18,16 @@ export function findAvailablePort(startPort, endPort = 8000) {
           } else {
             if (killProcess) {
               exec("kill -9 $(lsof -t -i:" + port + ")", (err, stdout, stderr) => {
-                if (!err) {
+                // Always settle the promise: if the kill failed (e.g. the process
+                // is already gone — a common race when we just asked it to stop),
+                // the port is effectively free. Never leave this pending.
+                if (err) {
+                  console.warn(`Could not kill process on port ${port} (may already be gone): ${err.message}`)
+                } else {
                   console.log("Previous server instance was killed successfully")
-                  console.log(`Port ${port} is now available !`)
-                  resolve(port)
                 }
-                stdout && console.log(stdout) && console.log(stderr)
+                console.log(`Port ${port} is now available !`)
+                resolve(port)
               })
             } else {
               port++
@@ -45,12 +49,15 @@ export function findAvailablePort(startPort, endPort = 8000) {
               let line = stdout.trim().split("\n")[0]
               let PID = line.trim().split(/\s+/)[line.trim().split(/\s+/).length - 1].split("/")[0]
               exec(`${platform == "win32" ? "taskkill /f /t /pid" : "kill"} ${PID}`, (err, stdout, stderr) => {
-                if (!err) {
+                // Always settle: a failed taskkill (process already exited during
+                // the restart race on Windows) must not wedge the backend startup.
+                if (err) {
+                  console.warn(`Could not kill process on port ${port} (may already be gone): ${err.message}`)
+                } else {
                   console.log("Previous server instance was killed successfully")
-                  console.log(`Port ${port} is now available !`)
-                  resolve(port)
                 }
-                stdout && console.log(stdout) && console.log(stderr)
+                console.log(`Port ${port} is now available !`)
+                resolve(port)
               })
             } else {
               port++
@@ -77,12 +84,14 @@ export function killProcessOnPort(port) {
           resolve(port)
         } else {
           exec("kill -9 $(lsof -t -i:" + port + ")", (err, stdout, stderr) => {
-            if (!err) {
+            // Always settle: a failed kill (process already gone) must not hang.
+            if (err) {
+              console.warn(`Could not kill process on port ${port} (may already be gone): ${err.message}`)
+            } else {
               console.log("Previous server instance was killed successfully")
-              console.log(`Port ${port} is now available !`)
-              resolve(port)
             }
-            stdout && console.log(stdout) && console.log(stderr)
+            console.log(`Port ${port} is now available !`)
+            resolve(port)
           })
         }
       })
@@ -94,12 +103,14 @@ export function killProcessOnPort(port) {
         } else {
           let PID = stdout.trim().split(/\s+/)[stdout.trim().split(/\s+/).length - 1].split("/")[0]
           exec(`${platform == "win32" ? "taskkill /f /t /pid" : "kill"} ${PID}`, (err, stdout, stderr) => {
-            if (!err) {
+            // Always settle: a failed taskkill must not wedge callers awaiting this.
+            if (err) {
+              console.warn(`Could not kill process on port ${port} (may already be gone): ${err.message}`)
+            } else {
               console.log("Previous server instance was killed successfully")
-              console.log(`Port ${port} is now available !`)
-              resolve(port)
             }
-            stdout && console.log(stdout) && console.log(stderr)
+            console.log(`Port ${port} is now available !`)
+            resolve(port)
           })
         }
       })
