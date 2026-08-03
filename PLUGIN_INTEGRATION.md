@@ -78,7 +78,7 @@ document notes, per step, how the two modes differ.
   ┌─────────────────────┐  reverse proxy   ┌──────────────────────┐
   │ MEDomics Go server  │─────────────────►│ STARHE Go server     │
   │ blueprints/starhe/  │  /starhe/* →     │ (port 8082)          │
-  │ (proxy blueprint)   │  localhost:8082  │ serves UI + API      │
+  │ (proxy blueprint)   │  127.0.0.1:8082  │ serves UI + API      │
   └─────────────────────┘                  └──────────┬───────────┘
                                                       │ subprocess
                                                       ▼
@@ -373,15 +373,18 @@ blueprint does not implement any plugin logic — it is a pure **reverse proxy**
 
 | Route on the MEDomics server | Forwarded to | Path rewrite |
 |---|---|---|
-| `/starhe/ui/*` | `http://localhost:8082/ui/*` | strips the `/starhe` prefix |
-| `/starhe/*` | `http://localhost:8082/starhe/*` | none (passed through) |
+| `/starhe/ui/*` | `http://127.0.0.1:8082/ui/*` | strips the `/starhe` prefix |
+| `/starhe/*` | `http://127.0.0.1:8082/starhe/*` | none (passed through) |
 
 Registration order does not matter: Go's `ServeMux` picks the longest matching pattern,
 so `/starhe/ui/` always wins over `/starhe/`.
 
 Key implementation details:
 
-- **Target resolution** — `STARHE_SERVER_PORT` env var, defaulting to `8082`.
+- **Target resolution** — `http://127.0.0.1:` + `STARHE_SERVER_PORT` (defaulting to `8082`).
+  IPv4 is forced (not `localhost`) because on Windows `localhost` resolves to IPv6 `::1`
+  first while the STARHE server listens on IPv4, which made the proxy fail with
+  "STARHE server unavailable".
 - **`FlushInterval: 50 * time.Millisecond`** — mandatory. The `/starhe/analyze` endpoint
   streams SSE; without a short flush interval the proxy buffers the stream and the UI
   receives all progress events at once at the end of the analysis.
@@ -568,7 +571,7 @@ ipcMain.handle("plugin:start-server", async (_e, id)      => { ... })
 ipcMain.handle("plugin:stop-server",  async (_e, id)      => { ... })
 ipcMain.handle("plugin:check-health", async (_e, port)    => {
   try {
-    const response = await axios.get(`http://localhost:${port}/health`, { timeout: 2000 })
+    const response = await axios.get(`http://127.0.0.1:${port}/health`, { timeout: 2000 })
     return { ok: response.status >= 200 && response.status < 300 }
   } catch { return { ok: false } }
 })
@@ -700,7 +703,7 @@ plugin:install ──────────►  installPlugin("starhe")  → i
 ```
 starhe.jsx mounts
   ├─ plugin:start-server ─► killProcessOnPort(8082) → spawn go_server (env: STARHE_UI_DIR…)
-  └─ poll plugin:check-health every 2 s (main-process axios → localhost:8082/health)
+  └─ poll plugin:check-health every 2 s (main-process axios → 127.0.0.1:8082/health)
         └─ on ok → render <iframe src="http://localhost:{medomicsPort}/starhe/ui/?v={ts}">
                             └─ MEDomics Go proxy → STARHE Go server → renderer/dist/
 ```
