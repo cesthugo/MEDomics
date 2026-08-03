@@ -3,6 +3,33 @@ import { getPythonEnvironment, getBundledPythonEnvironment } from "./pythonEnv"
 const { exec, execFile } = require("child_process")
 const os = require("os")
 var path = require("path")
+const fs = require("fs")
+const { app } = require("electron")
+
+// Persist the core Go backend's own stdout/stderr/exit to a file, because on
+// Windows a packaged child's console output is buffered and lost — leaving us
+// blind when the backend dies. Mirrors the STARHE plugin's server.log.
+function attachCoreLogging(proc, serverState) {
+  let logStream = null
+  try {
+    logStream = fs.createWriteStream(path.join(app.getPath("userData"), "core-server.log"), { flags: "a" })
+    logStream.write(`\n===== ${new Date().toISOString()} core backend launched (pid ${proc.pid}) =====\n`)
+  } catch {}
+  const write = (s) => { try { logStream && logStream.write(s) } catch {} }
+  if (proc.stdout) proc.stdout.on("data", (d) => { const s = d.toString("utf8"); console.log("core: " + s); write(s) })
+  if (proc.stderr) proc.stderr.on("data", (d) => { const s = d.toString("utf8"); console.log("core stderr: " + s); write(s) })
+  proc.on("error", (err) => {
+    console.error("core backend spawn error:", err)
+    write(`\n===== ${new Date().toISOString()} spawn error: ${err && err.message} =====\n`)
+    serverState.serverIsRunning = false
+  })
+  proc.on("close", (code, signal) => {
+    serverState.serverIsRunning = false
+    console.log(`core backend closed (code ${code} signal ${signal})`)
+    write(`\n===== ${new Date().toISOString()} closed code=${code} signal=${signal} =====\n`)
+    try { logStream && logStream.end() } catch {}
+  })
+}
 
 export function findAvailablePort(startPort, endPort = 8000) {
   let killProcess = MEDconfig.portFindingMethod === PORT_FINDING_METHOD.FIX || !MEDconfig.runServerAutomatically
@@ -223,17 +250,7 @@ export async function runServer(isProd, serverPort, serverProcess, serverState, 
           serverState.serverIsRunning = true
         }
         if (serverProcess) {
-          serverProcess.stdout.on("data", function (data) {
-            console.log("data: ", data.toString("utf8"))
-          })
-          serverProcess.stderr.on("data", (data) => {
-            console.log(`stderr: ${data}`)
-            serverState.serverIsRunning = true
-          })
-          serverProcess.on("close", (code) => {
-            serverState.serverIsRunning = false
-            console.log(`my server child process close all stdio with code ${code}`)
-          })
+          attachCoreLogging(serverProcess, serverState)
         }
       })
       .catch((err) => {

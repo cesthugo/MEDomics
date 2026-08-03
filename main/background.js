@@ -34,6 +34,14 @@ let mongoProcess = null
 const dirTree = require("directory-tree")
 const { exec, spawn, execSync } = require("child_process")
 let serverProcess = null
+// True while runServer is in flight (from the moment we decide to start until its
+// promise settles). The renderer's reconnect loop (layoutManager) calls
+// "start-server" on every failed attempt, and during the FIRST boot the module
+// `serverProcess` var is not assigned yet — so those early calls used to slip past
+// the "already running" guard and spawn a SECOND runServer, whose findAvailablePort
+// (FIX mode) taskkill'd port 54288 and killed the backend that was still booting.
+// This flag closes that race: no (re)start is attempted while one is already in flight.
+let serverStarting = false
 const serverState = { serverIsRunning: false }
 var serverPort = MEDconfig.defaultPort
 var hasBeenSet = false
@@ -311,9 +319,11 @@ if (isProd) {
   let bundledPythonPath = getBundledPythonEnvironment()
   if (MEDconfig.runServerAutomatically) {
     // Start the Go server – Python path is optional (passed if available)
+    serverStarting = true
     runServer(isProd, serverPort, serverProcess, serverState, bundledPythonPath)
       .then((process) => {
         serverProcess = process
+        serverStarting = false
         console.log("Server process started: ", serverProcess)
         // Auto-start installed plugins once the main server is up
         autoStartInstalledPlugins(mainWindow).catch((err) => {
@@ -321,6 +331,7 @@ if (isProd) {
         })
       })
       .catch((err) => {
+        serverStarting = false
         console.error("Failed to start server: ", err)
       })
   } else {
@@ -503,8 +514,11 @@ if (isProd) {
     // needs another moment to finish booting created a destructive kill/restart
     // loop on Windows where the Go server (and its STARHE reverse proxy) never
     // stabilized. Only (re)start when nothing is actually running.
-    if (serverProcess && serverState.serverIsRunning) {
-      console.log("start-server: backend already running — skipping restart")
+    if (serverStarting || (serverProcess && serverState.serverIsRunning)) {
+      // Either a start is already in flight (boot or a previous retry) or the
+      // backend is up. Never spawn a second runServer — its FIX-mode
+      // findAvailablePort would taskkill port 54288 and kill the live backend.
+      console.log("start-server: backend already running or starting — skipping restart")
       return serverState.serverIsRunning
     }
     if (serverProcess) {
@@ -513,19 +527,24 @@ if (isProd) {
         serverProcess.kill()
       } catch {}
     }
+    serverStarting = true
     console.log("Received Python path: ", pythonPath)
     if (MEDconfig.runServerAutomatically) {
       runServer(isProd, serverPort, serverProcess, serverState, pythonPath)
         .then((process) => {
           serverProcess = process
+          serverStarting = false
           console.log(`success: ${serverState.serverIsRunning}`)
           return serverState.serverIsRunning
         })
         .catch((err) => {
+          serverStarting = false
           console.error("Failed to start server: ", err)
           serverState.serverIsRunning = false
           return false
         })
+    } else {
+      serverStarting = false
     }
     return serverState.serverIsRunning
   })
